@@ -235,7 +235,6 @@ App = {
             var submissionId = App.bytes32FromHash(res[0].hash);
             return instance.createSubmission(bountyId, submissionId, {from: account}).then(function(result) {
               $('#addSubmissionModal').modal('hide');
-              return;
             }).catch(function(err) {
               console.log(err);
             });

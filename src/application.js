@@ -58,16 +58,14 @@ App = {
     var bountyRow = $('#bountyRow');
     var bountyTemplate = $('#bountyTemplate');
     App.contracts.Bounty.deployed().then(function(instance) {
-      return App.withFirstAccount(function(account) {
-        bountyRow.html('');
-        instance.listBounties.call({from: account}).then(function(bounties) {
-          for (i = 0; i < bounties.length; i ++) {
-            bountyTemplate.find('.panel-title').text(bounties[i]);
-            bountyTemplate.find('.btn').attr('data-id', bounties[i]);
+      bountyRow.html('');
+      instance.listBounties.call().then(function(bounties) {
+        for (i = 0; i < bounties.length; i ++) {
+          bountyTemplate.find('.panel-title').text(bounties[i]);
+          bountyTemplate.find('.btn').attr('data-id', bounties[i]);
 
-            bountyRow.append(bountyTemplate.html());
-          }
-        });
+          bountyRow.append(bountyTemplate.html());
+        }
       });
     });
   },
@@ -152,30 +150,28 @@ App = {
     var submissionRow = $('#submissionTable');
 
     return App.contracts.Bounty.deployed().then(function(instance) {
-      return App.withFirstAccount(function(account) {
-        return instance.getBountyAcceptedSubmission.call(bountyId, {from: account}).then(function(acceptedSubmission) {
-          return instance.listBountySubmissions.call(bountyId, {from: account}).then(function(submissions) {
-            submissionRow.html('');
-            for (i = 0; i < submissions.length; i ++) {
-              submissionTemplate.find('.label-success').addClass('hidden');
-              submissionTemplate.find('.label-danger').addClass('hidden');
-              submissionTemplate.find('.btn-accept-submission').removeClass('hidden');
-              submissionTemplate.find('.btn-reject-submission').removeClass('hidden');
-              if (acceptedSubmission != '0x0000000000000000000000000000000000000000000000000000000000000000') {
-                submissionTemplate.find('.btn-accept-submission').addClass('hidden');
-                submissionTemplate.find('.btn-reject-submission').addClass('hidden');
-              }
-              if (acceptedSubmission == submissions[i]) {
-                submissionTemplate.find('.label-success').removeClass('hidden');
-              }
-
-              submissionTemplate.find('.submission-id').html(submissions[i]);
-              submissionTemplate.find('.btn').attr('data-bounty-id', bountyId);
-              submissionTemplate.find('.btn').attr('data-id', submissions[i]);
-
-              submissionRow.append(submissionTemplate.html());
+      return instance.getBountyAcceptedSubmission.call(bountyId).then(function(acceptedSubmission) {
+        return instance.listBountySubmissions.call(bountyId).then(function(submissions) {
+          submissionRow.html('');
+          for (i = 0; i < submissions.length; i ++) {
+            submissionTemplate.find('.label-success').addClass('hidden');
+            submissionTemplate.find('.label-danger').addClass('hidden');
+            submissionTemplate.find('.btn-accept-submission').removeClass('hidden');
+            submissionTemplate.find('.btn-reject-submission').removeClass('hidden');
+            if (acceptedSubmission != '0x0000000000000000000000000000000000000000000000000000000000000000') {
+              submissionTemplate.find('.btn-accept-submission').addClass('hidden');
+              submissionTemplate.find('.btn-reject-submission').addClass('hidden');
             }
-          });
+            if (acceptedSubmission == submissions[i]) {
+              submissionTemplate.find('.label-success').removeClass('hidden');
+            }
+
+            submissionTemplate.find('.submission-id').html(submissions[i]);
+            submissionTemplate.find('.btn').attr('data-bounty-id', bountyId);
+            submissionTemplate.find('.btn').attr('data-id', submissions[i]);
+
+            submissionRow.append(submissionTemplate.html());
+          }
         });
       });
     });

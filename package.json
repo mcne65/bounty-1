@@ -13,7 +13,8 @@
   "license": "ISC",
   "devDependencies": {
     "eslint": "^5.4.0",
-    "eslint-config-google": "^0.9.1"
+    "eslint-config-google": "^0.9.1",
+    "truffle-hdwallet-provider": "0.0.6"
   },
   "dependencies": {
     "bs58": "^4.0.1",

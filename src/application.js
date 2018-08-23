@@ -50,11 +50,12 @@ App = {
     $.getJSON('contracts/Bounty.json', function(BountyArtifact) {
       App.contracts.Bounty = TruffleContract(BountyArtifact);
       App.contracts.Bounty.setProvider(App.web3Provider);
-      App.getMyBounties();
+      App.getBounties();
+      App.getCurrentAccount();
     });
   },
 
-  getMyBounties: function() {
+  getBounties: function() {
     var bountyRow = $('#bountyRow');
     var bountyTemplate = $('#bountyTemplate');
     App.contracts.Bounty.deployed().then(function(instance) {
@@ -67,6 +68,13 @@ App = {
           bountyRow.append(bountyTemplate.html());
         }
       });
+    });
+  },
+
+  getCurrentAccount: function() {
+    App.withFirstAccount(function(account) {
+      console.log(account);
+      $('#currentAccountHolder').text(account);
     });
   },
 
@@ -119,7 +127,7 @@ App = {
           var bountyId = App.bytes32FromHash(res[0].hash);
           return instance.createBounty(bountyId, parseInt(data.amount), {from: account}).then(function(result) {
             $('#addBountyModal').modal('hide');
-            return App.getMyBounties();
+            return App.getBounties();
           }).catch(function(err) {
             console.log(err.message);
           });

@@ -12,12 +12,22 @@ Any user can add submissions to bounties as long as they do not
 
 
 # Set Up
-* We assume that you have truffle ganache, and ipfs already installed.
-* This will not use Metamask for web3 but will inject its own, if you wish to use metamask you need to change src/application.js
+* We assume that you have git, nodejs, npm, and ipfs already installed.
+* This will not use Metamask for web3 if available, otherwise it will initialize its own for localhost:8485. See src/application.js
+
+
+## Node version
+You need a newer version of nodejs than the one shipped with Ubuntu 16.04 for this project to run. I recommend you use [nvm](https://github.com/creationix/nvm) to manage different node versions.
+
+###
+```
+nvm install 8.7.0
+nvm use 8.7.0
+```
 
 ### Dependencies
 ```
-$ npm install
+$ npm install && npm install -g truffle ganache-cli
 $ truffle install
 $ truffle compile
 

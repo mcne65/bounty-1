@@ -1,0 +1,16 @@
+{
+  "package_name": "bounty",
+  "version": "0.0.1",
+  "description": "Simple contract for bounty listing",
+  "authors": [
+    "Yavor Stoychev <stoychev.yavor@gmail.com>"
+  ],
+  "keywords": [
+    "ethereum",
+    "addition"
+  ],
+  "dependencies": {
+    "tokens": "^1.0.0"
+  },
+  "license": "MIT"
+}

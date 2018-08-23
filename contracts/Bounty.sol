@@ -1,133 +1,135 @@
 pragma solidity ^0.4.23;
 
 import "tokens/contracts/eip20/EIP20.sol";
+import "./CircuitBreaker.sol";
+import "./Mortal.sol";
 
 /** @title Bounty contractr. */
-contract Bounty is EIP20(1000000 * 10**uint(18), "Bounty Token", 18, "BTY") {
+contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty Token", 18, "BTY")  {
 
-  // bounty owner -> bounty hashes
-  bytes32[] public bounties;
-  // bounty hash -> bounty owner
-  mapping (bytes32 => address) public bountyToOwnerMap;
-  // bounty hash -> bounty amounts
-  mapping (bytes32 => uint) public bountyAmounts;
-  // submitter -> submission hashes
-  mapping (address => bytes32[]) public submissions;
-  // submission hash -> submitter address
-  mapping (bytes32 => address) public submissionToSubmitterMap;
-  // submission hash -> bounty hash
-  mapping (bytes32 => bytes32) public submissionToBountyMap;
-  // bounty hash- to submissions map
-  mapping (bytes32 => bytes32[]) public bountyToSubmissionsMap;
-  // bounty hash -> accepted submission hash
-  mapping (bytes32 => bytes32) public bountyToAcceptedSubmissionMap;
-  // submission hash -> bool (rejected)
-  mapping (bytes32 => bool) public rejectedSubmissions;
-  // submission hash -> bool (rejected)
-  mapping (bytes32 => bytes32[]) public bountyToRejectedSubmissionsMap;
+  struct Bounty {
+    address owner;
+    uint amount;
+    bytes32[] submissionIds;
+    bytes32 acceptedSubmissionId;
+  }
 
-  modifier nonEmpty(bytes32 _hash) { require(_hash != 0x0000000000000000000000000000000000000000000000000000000000000000); _;}
-  modifier empty(bytes32 _hash) { require(_hash == 0x0000000000000000000000000000000000000000000000000000000000000000); _;}
-  modifier isFalse(bool _value) { require(!_value); _;}
-  modifier nonZero(uint amount) { require(amount > 0); _;}
+  struct Submission {
+    address owner;
+    bytes32 bountyId;
+    bool rejected;
+  }
 
+  bytes32[] public bountyIds;
+  bytes32[] public submissionIds;
 
-  modifier bountyOwner(bytes32 bountyId) { require(bountyToOwnerMap[bountyId] == msg.sender); _;}
+  mapping (bytes32 => Bounty) private bounties;
+  mapping (bytes32 => Submission) private submissions;
+
+  event CreateBounty(bytes32 bountyId, address owner, uint amount);
+  event CreateSubmission(bytes32 submissionId, bytes32 bountyId, address owner);
+  event AcceptSubmission(bytes32 submissionId);
+  event RejectSubmission(bytes32 submissionId);
+
+  modifier positive(uint amount) { require(amount > 0); _;}
+  modifier nonDefaultValue(bytes32 id) { require(id != 0x0); _;}
+  modifier bountyOwner(bytes32 _submissionId) { require(bounties[submissions[_submissionId].bountyId].owner == msg.sender); _;}
+  modifier noAcceptedSubmission(bytes32 _submissionId) { require(bounties[submissions[_submissionId].bountyId].acceptedSubmissionId == 0x0); _;}
+  modifier nonRejectedSubmission(bytes32 _submissionId) { require(submissions[_submissionId].rejected == false); _;}
 
   /** @dev Creates a bounty and escrows bounty amount from contract.
   * @param bountyId bounty id.
   * @param amount bounty amount.
   */
-  function createBounty(bytes32 bountyId, uint amount) public nonEmpty(bountyId) nonZero(amount) {
-    // make sure a bounty with this hash does not exist
-    require(bountyAmounts[bountyId] == 0);
+  function createBounty(bytes32 bountyId, uint amount) external nonDefaultValue(bountyId) positive(amount) stoppedInEmergency {
+    // bounty should not exist
+    require(bounties[bountyId].owner == 0x0);
 
-    bounties.push(bountyId);
-    bountyToOwnerMap[bountyId] = msg.sender;
-    bountyAmounts[bountyId] = amount;
+    bountyIds.push(bountyId);
+    bounties[bountyId].owner = msg.sender;
+    bounties[bountyId].amount = amount;
     transfer(this, amount);
+
+    emit CreateBounty(bountyId, msg.sender, amount);
   }
 
   /** @dev Creates a submission for a bounty.
   * @param bountyId id of bounty.
   * @param submissionId id of submission.
   */
-  function createSubmission(bytes32 bountyId, bytes32 submissionId) public
-    nonEmpty(bountyId)
-    nonEmpty(submissionId)
-    empty(submissionToBountyMap[submissionId])  {
+  function createSubmission(bytes32 bountyId, bytes32 submissionId)
+    nonDefaultValue(bountyId)
+    nonDefaultValue(submissionId)
+    stoppedInEmergency external {
 
-    submissions[msg.sender].push(submissionId);
-    submissionToBountyMap[submissionId] = bountyId;
-    bountyToSubmissionsMap[bountyId].push(submissionId);
-    submissionToSubmitterMap[submissionId] = msg.sender;
+    // bounty should exist
+    require(bounties[bountyId].owner != 0x0);
+
+    require(bounties[bountyId].owner != 0x0);
+
+    // submission should not exist
+    require(submissions[submissionId].owner == 0x0);
+
+    // bounty should not have an accepted submission
+    require(bounties[bountyId].acceptedSubmissionId == 0x0);
+
+    submissionIds.push(submissionId);
+    submissions[submissionId].owner = msg.sender;
+    submissions[submissionId].bountyId = bountyId;
+
+    bounties[bountyId].submissionIds.push(submissionId);
+
+    emit CreateSubmission(submissionId, bountyId, msg.sender);
   }
 
   /** @dev Lists all bounties.
   * @return list of bounty ids.
   */
-  function listBounties() public view returns (bytes32[]) {
-    return bounties;
-  }
-
-  /** @dev Lists submissions owned by caller.
-  * @return list of submission ids.
-  */
-  function listMySubmissions() public view returns (bytes32[]) {
-    return submissions[msg.sender];
+  function listBounties() external view returns (bytes32[]) {
+    return bountyIds;
   }
 
   /** @dev Lists all submissions for a given bounty.
   * @return list of submission ids.
   */
-  function listBountySubmissions(bytes32 bountyId) public view
-    nonEmpty(bountyId)
-    returns (bytes32[]) {
-
-    return bountyToSubmissionsMap[bountyId];
-  }
-
-  /** @dev Lists rejected submissions for a given bounty.
-  * @param bountyId id of bounty.
-  * @return list of submission ids.
-  */
-  function listBountyRejectedSubmissions(bytes32 bountyId) public view
-    nonEmpty(bountyId) returns (bytes32[]) {
-    return bountyToRejectedSubmissionsMap[bountyId];
+  function listBountySubmissions(bytes32 bountyId) external view returns (bytes32[]) {
+    return bounties[bountyId].submissionIds;
   }
 
   /** @dev Get accepted submission for a given bounty.
   * @param bountyId id of bounty.
   * @return submission id.
   */
-  function getBountyAcceptedSubmission(bytes32 bountyId) public view
-    nonEmpty(bountyId) returns (bytes32) {
-    return bountyToAcceptedSubmissionMap[bountyId];
+  function getBountyAcceptedSubmission(bytes32 bountyId) external view returns (bytes32) {
+    return bounties[bountyId].acceptedSubmissionId;
   }
 
   /** @dev Accepts a given submission, releasing the escrowed bounty amount to the bounty owner.
   * @param submissionId id of submission.
   */
-  function acceptSubmission(bytes32 submissionId) public
-    nonEmpty(submissionId)
-    empty(bountyToAcceptedSubmissionMap[submissionToBountyMap[submissionId]])
-    isFalse(rejectedSubmissions[submissionId])
-    bountyOwner(submissionToBountyMap[submissionId]) {
+  function acceptSubmission(bytes32 submissionId) external
+    nonDefaultValue(submissionId)
+    bountyOwner(submissionId)
+    noAcceptedSubmission(submissionId)
+    nonRejectedSubmission(submissionId)
+    stoppedInEmergency {
 
-    bountyToAcceptedSubmissionMap[submissionToBountyMap[submissionId]] = submissionId;
-    this.transfer(submissionToSubmitterMap[submissionId], bountyAmounts[submissionToBountyMap[submissionId]]);
+    bounties[submissions[submissionId].bountyId].acceptedSubmissionId = submissionId;
+    this.transfer(submissions[submissionId].owner, bounties[submissions[submissionId].bountyId].amount);
+    emit AcceptSubmission(submissionId);
   }
 
   /** @dev Rejects a given submission.
   * @param submissionId id of submission.
   */
-  function rejectSubmission(bytes32 submissionId) public
-    nonEmpty(submissionId)
-    empty(bountyToAcceptedSubmissionMap[submissionToBountyMap[submissionId]])
-    isFalse(rejectedSubmissions[submissionId])
-    bountyOwner(submissionToBountyMap[submissionId]) {
+  function rejectSubmission(bytes32 submissionId) external
+    nonDefaultValue(submissionId)
+    bountyOwner(submissionId)
+    noAcceptedSubmission(submissionId)
+    nonRejectedSubmission(submissionId)
+    stoppedInEmergency {
 
-    bountyToRejectedSubmissionsMap[submissionToBountyMap[submissionId]].push(submissionId);
-    rejectedSubmissions[submissionId] = true;
+    submissions[submissionId].rejected = true;
+    emit RejectSubmission(submissionId);
   }
 }

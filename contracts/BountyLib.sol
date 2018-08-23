@@ -15,6 +15,11 @@ library BountyLib {
 
   modifier positive(uint amount) { require(amount > 0); _;}
 
+  /** @dev Creates a new bounty.
+  * @param self bounty storage.
+  * @param bountyId id of bounty.
+  * @param amount amount.
+  */
   function newBounty(BountyStorage storage self, bytes32 bountyId, uint amount) positive(amount) internal {
     // bounty should not exist
     require(self.bounties[bountyId].owner == 0x0);
@@ -24,14 +29,28 @@ library BountyLib {
     self.bounties[bountyId].amount = amount;
   }
 
+  /** @dev Adds submission for a given bounty.
+  * @param self bounty storage.
+  * @param bountyId id of bounty.
+  * @param submissionId id of submission.
+  */
   function addSubmission(BountyStorage storage self, bytes32 bountyId, bytes32 submissionId) internal {
     self.bounties[bountyId].submissionIds.push(submissionId);
   }
 
+  /** @dev Get accepted submission for a given bounty.
+  * @param self bounty storage.
+  * @param bountyId id of bounty.
+  */
   function acceptSubmission(BountyStorage storage self, bytes32 bountyId, bytes32 submissionId) internal {
     self.bounties[bountyId].acceptedSubmissionId = submissionId;
   }
 
+  /** @dev Get a bounty by id
+  * @param self bounty storage.
+  * @param bountyId id of bounty.
+  * @return bounty
+  */
   function get(BountyStorage storage self, bytes32 bountyId) internal view returns (Bounty) {
     return self.bounties[bountyId];
   }

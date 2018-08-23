@@ -6,10 +6,17 @@ App = {
 
   init: function() {
     App.ipfs = window.IpfsApi('localhost', '5001');
-    App.web3Provider = web3.currentProvider; // || new Web3.providers.HttpProvider('http://localhost:8545');
+    App.web3Provider = web3.currentProvider || new Web3.providers.HttpProvider('http://localhost:8545');
     web3 = new Web3(App.web3Provider);
     App.initContract();
     App.bindEvents();
+
+    App.setCurrentAccount(web3.eth.accounts[0]);
+    setInterval(function() {
+      if (web3.eth.accounts[0] !== App.account) {
+        App.setCurrentAccount(web3.eth.accounts[0]);
+      }
+    }, 100);
   },
 
   bytes32FromHash: function(hash) {
@@ -24,16 +31,6 @@ App = {
     var hashBytes = window.IpfsApi().Buffer.from(hashHex, 'hex');
     var hashStr = App.bs58.encode(hashBytes);
     return hashStr;
-  },
-
-  withFirstAccount: function(cb) {
-    web3.eth.getAccounts(function(error, accounts) {
-      if (error) {
-        console.log(error);
-      }
-
-      return cb(accounts[0]);
-    });
   },
 
   bindEvents: function() {
@@ -51,7 +48,6 @@ App = {
       App.contracts.Bounty = TruffleContract(BountyArtifact);
       App.contracts.Bounty.setProvider(App.web3Provider);
       App.getBounties();
-      App.getCurrentAccount();
     });
   },
 
@@ -71,11 +67,9 @@ App = {
     });
   },
 
-  getCurrentAccount: function() {
-    App.withFirstAccount(function(account) {
-      console.log(account);
-      $('#currentAccountHolder').text(account);
-    });
+  setCurrentAccount: function(account) {
+    App.account = account;
+    $('#currentAccountHolder').text(account);
   },
 
   handleAcceptSubmission: function(event) {
@@ -84,12 +78,10 @@ App = {
     var bountyId = $(event.target).attr('data-bounty-id');
 
     App.contracts.Bounty.deployed().then(function(instance) {
-      return App.withFirstAccount(function(account) {
-        return instance.acceptSubmission(submissionId, {from: account}).then(function(result) {
-          App.handleGetBountySubmissions(bountyId);
-        }).catch(function(err) {
-          console.log(err.message);
-        });
+      return instance.acceptSubmission(submissionId, {from: App.account}).then(function(result) {
+        App.handleGetBountySubmissions(bountyId);
+      }).catch(function(err) {
+        console.log(err.message);
       });
     });
   },
@@ -100,13 +92,11 @@ App = {
     var bountyId = $(event.target).attr('data-bounty-id');
 
     App.contracts.Bounty.deployed().then(function(instance) {
-      return App.withFirstAccount(function(account) {
-        return instance.rejectSubmission(submissionId, {from: account}).then(function(result) {
+        return instance.rejectSubmission(submissionId, {from: App.account}).then(function(result) {
           App.handleGetBountySubmissions(bountyId);
         }).catch(function(err) {
           console.log(err.message);
         });
-      });
     });
   },
 
@@ -123,14 +113,12 @@ App = {
         return;
       }
       App.contracts.Bounty.deployed().then(function(instance) {
-        return App.withFirstAccount(function(account) {
-          var bountyId = App.bytes32FromHash(res[0].hash);
-          return instance.createBounty(bountyId, parseInt(data.amount), {from: account}).then(function(result) {
-            $('#addBountyModal').modal('hide');
-            return App.getBounties();
-          }).catch(function(err) {
-            console.log(err.message);
-          });
+        var bountyId = App.bytes32FromHash(res[0].hash);
+        return instance.createBounty(bountyId, parseInt(data.amount), {from: App.account}).then(function(result) {
+          $('#addBountyModal').modal('hide');
+          return App.getBounties();
+        }).catch(function(err) {
+          console.log(err.message);
         });
       });
     });
@@ -239,13 +227,11 @@ App = {
           return;
         }
         App.contracts.Bounty.deployed().then(function(instance) {
-          return App.withFirstAccount(function(account) {
-            var submissionId = App.bytes32FromHash(res[0].hash);
-            return instance.createSubmission(bountyId, submissionId, {from: account}).then(function(result) {
-              $('#addSubmissionModal').modal('hide');
-            }).catch(function(err) {
-              console.log(err);
-            });
+          var submissionId = App.bytes32FromHash(res[0].hash);
+          return instance.createSubmission(bountyId, submissionId, {from: App.account}).then(function(result) {
+            $('#addSubmissionModal').modal('hide');
+          }).catch(function(err) {
+            console.log(err);
           });
         });
       });

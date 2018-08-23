@@ -79,7 +79,6 @@ App = {
 
     App.contracts.Bounty.deployed().then(function(instance) {
       return App.withFirstAccount(function(account) {
-        console.log(submissionId);
         return instance.acceptSubmission(submissionId, {from: account}).then(function(result) {
           App.handleGetBountySubmissions(bountyId);
         }).catch(function(err) {
@@ -219,12 +218,6 @@ App = {
         $('#submissionDownloadModal').modal('show');
       });
     });
-  },
-
-  handleSubmissionFileChanged: function(e) {
-    reader = new FileReader();
-    reader.readAsDataURL();
-    console.log(e.target.files);
   },
 
   handleAddSubmission: function(e) {

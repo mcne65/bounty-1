@@ -12,8 +12,8 @@ Any user can add submissions to bounties as long as they do not
 
 
 # Set Up
-* We assume that you have git, nodejs, npm, and ipfs already installed.
-* This will not use Metamask for web3 if available, otherwise it will initialize its own for localhost:8485. See src/application.js
+* We assume that you have git and ipfs already installed.
+* This will use Metamask for web3 if available, otherwise it will initialize its own for localhost:8485. See [src/application.js](src/application.js)
 
 
 ## Node version
@@ -72,3 +72,4 @@ See [avoiding_common_attacks.md](avoiding_common_attacks.md) for an explanation 
 
 ### Stretch Requirements Fulfilled
 * Used IPFS
+* Deloyed contract to rinkeby testnet

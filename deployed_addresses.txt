@@ -1,5 +1,5 @@
 Deployed addresses @ rinkeby testnet:
 
- BountyLib: 0xb48217d2ebec4cf3dbc9a2fe0ea3edbda95d6523
- SubmissionLib: 0xabed442dddde6e9c228c774365cd3319b31fce3c
- Bounty: 0x07cb9a141df42ce9cd7bf0f1bb1de69a1f8705c8
+ BountyLib: 0xcc17b93e757deb2e328a96fc34dd35a5480cb365
+ SubmissionLib: 0x3404aea1cbd047c934b0f68b99e1a6a4d7c9fbfb
+ Bounty: 0x4ea12d7fbd19a354857ab9346a00a680dcaa045a

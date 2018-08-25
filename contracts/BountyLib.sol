@@ -21,8 +21,8 @@ library BountyLib {
   * @param amount amount.
   */
   function newBounty(BountyStorage storage self, bytes32 bountyId, uint amount) positive(amount) internal {
-    // bounty should not exist
-    require(self.bounties[bountyId].owner == 0x0);
+    require(self.bounties[bountyId].owner == 0x0, "A bounty with this id already exists");
+    require(self.bountyIds.length + 1 > self.bountyIds.length, "Unable to add bounty - too many bounties.");
 
     self.bountyIds.push(bountyId);
     self.bounties[bountyId].owner = msg.sender;

@@ -21,10 +21,21 @@ contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty
   event RejectSubmission(bytes32 submissionId);
 
 
-  modifier nonDefaultValue(bytes32 id) { require(id != 0x0); _;}
-  modifier bountyOwner(bytes32 submissionId) { require(bounties.get(submissions.bountyId(submissionId)).owner == msg.sender); _;}
-  modifier noAcceptedSubmission(bytes32 submissionId) { require(bounties.get(submissions.bountyId(submissionId)).acceptedSubmissionId == 0x0); _;}
-  modifier nonRejectedSubmission(bytes32 submissionId) { require(submissions.get(submissionId).rejected == false); _;}
+  modifier nonDefaultValue(bytes32 id) { require(id != 0x0, "Non-default value for id required."); _;}
+  modifier bountyOwner(bytes32 submissionId) {
+    require(bounties.get(submissions.bountyId(submissionId)).owner == msg.sender,
+      "This action can only be performed by the bounty owner.");
+    _;}
+
+  modifier noAcceptedSubmission(bytes32 bountyId) {
+    require(bounties.get(bountyId).acceptedSubmissionId == 0x0,
+      "This bounty is closed.");
+    _;}
+
+  modifier nonRejectedSubmission(bytes32 submissionId) {
+    require(submissions.get(submissionId).rejected == false,
+      "This submission is already rejected.");
+    _;}
 
   /** @dev Creates a bounty and escrows bounty amount from contract.
   * @param bountyId bounty id.
@@ -43,13 +54,10 @@ contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty
   function createSubmission(bytes32 bountyId, bytes32 submissionId)
     nonDefaultValue(bountyId)
     nonDefaultValue(submissionId)
+    noAcceptedSubmission(bountyId)
     stoppedInEmergency external {
 
-    // bounty should exist
-    require(bounties.get(bountyId).owner != 0x0);
-
-    // bounty should not have an accepted submission
-    require(bounties.get(bountyId).acceptedSubmissionId == 0x0);
+    require(bounties.get(bountyId).owner != 0x0, "Bounty does not exist.");
 
     submissions.newSubmission(bountyId, submissionId);
     bounties.addSubmission(bountyId, submissionId);
@@ -83,8 +91,8 @@ contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty
   */
   function acceptSubmission(bytes32 submissionId) external
     nonDefaultValue(submissionId)
-    bountyOwner(submissionId)
-    noAcceptedSubmission(submissionId)
+    bountyOwner(submissionId) // implicitly tests that bounty exists
+    noAcceptedSubmission(submissions.bountyId(submissionId))
     nonRejectedSubmission(submissionId)
     stoppedInEmergency {
 
@@ -98,8 +106,8 @@ contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty
   */
   function rejectSubmission(bytes32 submissionId) external
     nonDefaultValue(submissionId)
-    bountyOwner(submissionId)
-    noAcceptedSubmission(submissionId)
+    bountyOwner(submissionId) // implicitly tests that bounty exists
+    noAcceptedSubmission(submissions.bountyId(submissionId))
     nonRejectedSubmission(submissionId)
     stoppedInEmergency {
 

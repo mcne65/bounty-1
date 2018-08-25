@@ -6,7 +6,7 @@ import "./Owned.sol";
 contract CircuitBreaker is Owned {
   bool isStopped = false;
 
-  modifier stoppedInEmergency { require(!isStopped); _; }
+  modifier stoppedInEmergency { require(!isStopped, 'Contract circuit breaker is active.'); _; }
 
   /** @dev Stops contract from executing.*/
   function stopContract() public contractOwner {

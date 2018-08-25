@@ -18,8 +18,8 @@ library SubmissionLib {
   * @param submissionId id of submission.
   */
   function newSubmission(SubmissionStorage storage self, bytes32 bountyId, bytes32 submissionId) internal {
-    // submission should not exist
-    require(self.submissions[submissionId].owner == 0x0);
+    require(self.submissions[submissionId].owner == 0x0, "A submission with this id already exists.");
+    require(self.submissionIds.length + 1 > self.submissionIds.length, "Unable to add submission - too many submissions.");
 
     self.submissionIds.push(submissionId);
     self.submissions[submissionId].owner = msg.sender;

@@ -7,13 +7,15 @@ import "./CircuitBreaker.sol";
 import "./Mortal.sol";
 
 /** @title Bounty contractr. */
-contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty Token", 18, "BTY")  {
+contract Bounty is Mortal, CircuitBreaker  {
 
   using BountyLib for BountyLib.BountyStorage;
   using SubmissionLib for SubmissionLib.SubmissionStorage;
 
   BountyLib.BountyStorage private bounties;
   SubmissionLib.SubmissionStorage private submissions;
+
+  EIP20 private tokenContract = new EIP20(1000000 * 10**uint(18), "Bounty Token", 18, "BTY");
 
   event CreateBounty(bytes32 bountyId, address owner, uint amount);
   event CreateSubmission(bytes32 submissionId, bytes32 bountyId, address owner);
@@ -37,13 +39,21 @@ contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty
       "This submission is already rejected.");
     _;}
 
+  modifier positive(uint amount) { require(amount > 0); _;}
+
+  /** @dev Buys tokens 1 BTY = 1 wei.
+  */
+  function buyTokens() external payable stoppedInEmergency {
+    tokenContract.transfer(msg.sender, msg.value);
+  }
+
   /** @dev Creates a bounty and escrows bounty amount from contract.
   * @param bountyId bounty id.
   * @param amount bounty amount.
   */
-  function createBounty(bytes32 bountyId, uint amount) external nonDefaultValue(bountyId) stoppedInEmergency {
+  function createBounty(bytes32 bountyId, uint amount) external positive(amount) nonDefaultValue(bountyId) stoppedInEmergency {
+    tokenContract.transferFrom(msg.sender, this, amount);
     bounties.newBounty(bountyId, amount);
-    transfer(this, amount);
     emit CreateBounty(bountyId, msg.sender, amount);
   }
 
@@ -97,7 +107,7 @@ contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty
     stoppedInEmergency {
 
     bounties.acceptSubmission(submissions.get(submissionId).bountyId, submissionId);
-    this.transfer(submissions.get(submissionId).owner, bounties.get(submissions.bountyId(submissionId)).amount);
+    tokenContract.transfer(submissions.get(submissionId).owner, bounties.get(submissions.bountyId(submissionId)).amount);
     emit AcceptSubmission(submissionId);
   }
 
@@ -113,5 +123,9 @@ contract Bounty is Mortal, CircuitBreaker, EIP20(1000000 * 10**uint(18), "Bounty
 
     submissions.rejectSubmission(submissionId);
     emit RejectSubmission(submissionId);
+  }
+
+  function getTokenContractAddress() external returns (address) {
+    return address(tokenContract);
   }
 }

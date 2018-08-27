@@ -8,12 +8,15 @@ A user may submit a bounty for some work to be done. They may set an name, a sor
 Bounties are public information.
 
 ### User Adds Submission to Bounty
-Any user can add submissions to bounties as long as they do not
+Any user can add submissions to bounties as long as they are not closed.
 
 
 # Set Up
-* We assume that you have git and ipfs already installed.
-* This will use Metamask for web3 if available, otherwise it will initialize its own for localhost:8485. See [src/application.js](src/application.js)
+* We assume that you are runnign Ubuntu 16.04 and have git already installed.
+* This will not use Metamask for web3 if available, otherwise it will initialize its own for localhost:8485. See src/application.js
+
+## IPFS
+Please refer to [these instructions](https://ipfs.io/docs/install) for installing ipfs.
 
 
 ## Node version
@@ -72,4 +75,3 @@ See [avoiding_common_attacks.md](avoiding_common_attacks.md) for an explanation 
 
 ### Stretch Requirements Fulfilled
 * Used IPFS
-* Deloyed contract to rinkeby testnet

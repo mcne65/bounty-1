@@ -13,14 +13,12 @@ library BountyLib {
     mapping (bytes32 => Bounty) bounties;
   }
 
-  modifier positive(uint amount) { require(amount > 0); _;}
-
   /** @dev Creates a new bounty.
   * @param self bounty storage.
   * @param bountyId id of bounty.
   * @param amount amount.
   */
-  function newBounty(BountyStorage storage self, bytes32 bountyId, uint amount) positive(amount) internal {
+  function newBounty(BountyStorage storage self, bytes32 bountyId, uint amount) internal {
     require(self.bounties[bountyId].owner == 0x0, "A bounty with this id already exists");
     require(self.bountyIds.length + 1 > self.bountyIds.length, "Unable to add bounty - too many bounties.");
 

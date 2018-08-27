@@ -10,13 +10,6 @@ App = {
     web3 = new Web3(App.web3Provider);
     App.initContract();
     App.bindEvents();
-
-    App.setCurrentAccount(web3.eth.accounts[0]);
-    setInterval(function() {
-      if (web3.eth.accounts[0] !== App.account) {
-        App.setCurrentAccount(web3.eth.accounts[0]);
-      }
-    }, 100);
   },
 
   bytes32FromHash: function(hash) {
@@ -36,6 +29,7 @@ App = {
   bindEvents: function() {
     $('#addBountyForm').on('submit', App.handleAddBounty);
     $('#addSubmissionForm').on('submit', App.handleAddSubmission);
+    $('#buyTokensForm').on('submit', App.handleBuyTokens);
     $(document).on('click', '.btn-bounty-details', App.handleGetBountyDetails);
     $(document).on('click', '.btn-add-submission', App.handleAddSubmissionClicked);
     $(document).on('click', '.btn-download-submission', App.handleGetSubmissionDowload);
@@ -47,7 +41,15 @@ App = {
     $.getJSON('contracts/Bounty.json', function(BountyArtifact) {
       App.contracts.Bounty = TruffleContract(BountyArtifact);
       App.contracts.Bounty.setProvider(App.web3Provider);
-      App.getBounties();
+      $.getJSON('contracts/EIP20.json', function(EIP20Artifact) {
+        App.contracts.EIP20 = TruffleContract(EIP20Artifact);
+        App.contracts.EIP20.setProvider(App.web3Provider);
+        App.setCurrentAccount(web3.eth.accounts[0]);
+        setInterval(function() {
+          App.setCurrentAccount(web3.eth.accounts[0]);
+        }, 1000);
+        App.getBounties();
+      });
     });
   },
 
@@ -67,9 +69,24 @@ App = {
     });
   },
 
+  withEIP20: function(cb) {
+    App.contracts.Bounty.deployed().then(function(instance) {
+      instance.getTokenContractAddress.call().then(function(address) {
+        App.contracts.EIP20.at(address).then(function(eip20) {
+          cb(eip20);
+        });
+      });
+    });
+  },
+
   setCurrentAccount: function(account) {
     App.account = account;
     $('#currentAccountHolder').text(account);
+    App.withEIP20(function(eip20) {
+      return eip20.balanceOf.call(account).then(function(balance) {
+        $('#balanceHolder').text(balance.toNumber());
+      });
+    });
   },
 
   handleAcceptSubmission: function(event) {
@@ -81,12 +98,30 @@ App = {
       return instance.acceptSubmission(submissionId, {from: App.account}).then(function(result) {
         App.handleGetBountySubmissions(bountyId);
       }).catch(function(err) {
-        console.log(err.message);
+        alert(err.message);
+      });
+    });
+  },
+
+  handleBuyTokens: function(event) {
+    event.preventDefault();
+    var data = $(event.target).serializeArray().reduce((obj, item) => {
+      obj[item.name] = item.value;
+      return obj;
+    }, {});
+
+    App.contracts.Bounty.deployed().then(function(instance) {
+      return instance.buyTokens({from: App.account, value: data.amount}).then(function(result) {
+        $('#buyTokensModal').modal('hide');
+      }).catch(function(err) {
+        $('#alert').html(err.message).removeClass('hidden');
+        $('#buyTokensModal').modal('hide');
       });
     });
   },
 
   handleRejectSubmission: function(event) {
+    $('#alert').html('').addClass('hidden');
     event.preventDefault();
     var submissionId = $(event.target).attr('data-id');
     var bountyId = $(event.target).attr('data-bounty-id');
@@ -95,14 +130,15 @@ App = {
         return instance.rejectSubmission(submissionId, {from: App.account}).then(function(result) {
           App.handleGetBountySubmissions(bountyId);
         }).catch(function(err) {
-          console.log(err.message);
+          alert(err.message);
         });
     });
   },
 
-  handleAddBounty: function(e) {
-    e.preventDefault();
-    var data = $(e.target).serializeArray().reduce((obj, item) => {
+  handleAddBounty: function(event) {
+    event.preventDefault();
+    $('#alert').html('').addClass('hidden');
+    var data = $(event.target).serializeArray().reduce((obj, item) => {
       obj[item.name] = item.value;
       return obj;
     }, {});
@@ -112,14 +148,20 @@ App = {
         console.log(err);
         return;
       }
+
       App.contracts.Bounty.deployed().then(function(instance) {
         var bountyId = App.bytes32FromHash(res[0].hash);
-        return instance.createBounty(bountyId, parseInt(data.amount), {from: App.account}).then(function(result) {
-          $('#addBountyModal').modal('hide');
-          return App.getBounties();
-        }).catch(function(err) {
-          console.log(err.message);
+        return App.withEIP20(function(eip20) {
+          eip20.approve(instance.address, parseInt(data.amount)).then(function(approvalResult) {
+            return instance.createBounty(bountyId, parseInt(data.amount), {from: App.account}).then(function(result) {
+              $('#addBountyModal').modal('hide');
+              return App.getBounties();
+            });
+          });
         });
+      }).catch(function(err) {
+        $('#alert').html(err.message).removeClass('hidden');
+        $('#addBountyModal').modal('hide');
       });
     });
   },

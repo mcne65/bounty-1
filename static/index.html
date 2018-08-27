@@ -19,10 +19,14 @@
   </head>
   <body>
     <div class="container">
-      <p>Current account: <span id="currentAccountHolder"></span></p>
+      <p>Current account: <span id="currentAccountHolder"></span>, balance: BTY <span id="balanceHolder"></span></p>
+      <div id="alert" class="alert alert-danger hidden" role="alert"></div>
       <h3 clearfix> Bounties
         <div class="pull-right">
           <button class="btn btn-primary" type="button" data-toggle="modal" data-target="#addBountyModal"><span class="glyphicon glyphicon-plus"></span> Add Bounty</button>
+          <button class="btn btn-info" type="button"data-toggle="modal" data-target="#buyTokensModal" >
+            <span class="glyphicon glyphicon-usd"></span> Buy Tokens
+          </button>
         </div>
       </h3>
       <hr/>
@@ -88,6 +92,31 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             <button type="submit" type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-check"></span> Save</button>
+          </div>
+        </form><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div id="buyTokensModal" class="modal fade" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <form id="buyTokensForm" class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">BuyTokens</h4>
+          </div>
+          <div class="modal-body">
+            <div class="form-horizontal">
+              <div class="form-group">
+                <label class="col-sm-2 control-label">Amount</label>
+                <div class="col-sm-10">
+                  <input type="number" min="0" step="1" class="form-control" name="amount" placeholder="Amount">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="submit" type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-check"></span> Buy</button>
           </div>
         </form><!-- /.modal-content -->
       </div><!-- /.modal-dialog -->

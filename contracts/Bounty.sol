@@ -132,4 +132,10 @@ contract Bounty is Mortal, CircuitBreaker  {
   function getTokenContractAddress() external returns (address) {
     return address(tokenContract);
   }
+
+  /** @dev Reverts calls to nonexistent functions
+  */
+  function() public {
+      revert("Fallback function called. Reverting.");
+  }
 }

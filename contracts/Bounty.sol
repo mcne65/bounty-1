@@ -39,7 +39,7 @@ contract Bounty is Mortal, CircuitBreaker  {
       "This submission is already rejected.");
     _;}
 
-  modifier positive(uint amount) { require(amount > 0); _;}
+  modifier positive(uint amount) { require(amount > 0, "Bounty amount must be positive"); _;}
 
   /** @dev Buys tokens 1 BTY = 1 wei.
   */
@@ -82,10 +82,10 @@ contract Bounty is Mortal, CircuitBreaker  {
   }
 
   /** @dev Lists all submissions for a given bounty.
-  * @return list of submission ids.
+  * @return (list of submission ids, list of rejected submission ids).
   */
-  function listBountySubmissions(bytes32 bountyId) external view returns (bytes32[]) {
-    return bounties.get(bountyId).submissionIds;
+  function listBountySubmissions(bytes32 bountyId) external view returns (bytes32[], bytes32[]) {
+    return (bounties.get(bountyId).submissionIds, bounties.get(bountyId).rejectedSubmissionIds);
   }
 
   /** @dev Get accepted submission for a given bounty.
@@ -122,9 +122,13 @@ contract Bounty is Mortal, CircuitBreaker  {
     stoppedInEmergency {
 
     submissions.rejectSubmission(submissionId);
+    bounties.rejectSubmission(submissions.bountyId(submissionId), submissionId);
     emit RejectSubmission(submissionId);
   }
 
+  /** @dev Get address of token contract
+  * @return address of contract token
+  */
   function getTokenContractAddress() external returns (address) {
     return address(tokenContract);
   }

@@ -1,8 +1,9 @@
 const Bounty = artifacts.require('./Bounty.sol');
-
+const EIP20 = artifacts.require('./EIP20.sol');
 
 contract('Bounty', ([owner, alice, bob, charlie]) => {
   let bounty;
+  let eip20;
 
   const bountyId ='0x0000000000000000000000000000000000000000000000000000000000000001';
   const revertMessage = 'VM Exception while processing transaction: revert';
@@ -15,29 +16,32 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
 
   beforeEach('setup contract for each test', async () => {
     bounty = await Bounty.new();
-    await bounty.transfer(alice, aliceBalance);
-    await bounty.transfer(bob, bobBalance);
+    await bounty.buyTokens({from: alice, value: aliceBalance});
+    await bounty.buyTokens({from: bob, value: bobBalance});
+    eip20 = EIP20.at(await bounty.getTokenContractAddress.call());
+    await eip20.approve(bounty.address, aliceBalance, {from: alice});
+    await eip20.approve(bounty.address, bobBalance, {from: bob});
   });
 
   it('happy case accepts submission', async () => {
     const bountyAmount = 3;
 
     await bounty.createBounty(bountyId, bountyAmount, {from: alice});
-    assert.equal(aliceBalance - bountyAmount, (await bounty.balanceOf(alice)).toNumber());
+    assert.equal(aliceBalance - bountyAmount, (await eip20.balanceOf(alice)).toNumber());
     await bounty.createSubmission(bountyId, bobSubmissionId, {from: bob});
     await bounty.createSubmission(bountyId, charlieSubmissionId, {from: charlie});
 
     const listResponse = await bounty.listBountySubmissions.call(bountyId, {from: alice});
     assert.equal(2, listResponse.length);
-    assert.equal(bobSubmissionId, listResponse[0]);
-    assert.equal(charlieSubmissionId, listResponse[1]);
+    assert.equal(bobSubmissionId, listResponse[0][0]);
+    assert.equal(charlieSubmissionId, listResponse[0][1]);
 
     await bounty.acceptSubmission(bobSubmissionId, {from: alice});
 
 
     const bountyAcceptedSubmissionResponse = await bounty.getBountyAcceptedSubmission.call(bountyId, {from: alice});
     assert.equal(bobSubmissionId, bountyAcceptedSubmissionResponse);
-    assert.equal(bobBalance + bountyAmount, (await bounty.balanceOf(bob)).toNumber());
+    assert.equal(bobBalance + bountyAmount, (await eip20.balanceOf(bob)).toNumber());
   });
 
   it('does not create bounty on zero amount', async () => {
@@ -55,7 +59,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
   });
 
   it('does not create bounty on default id', async () => {
-    const bountyAmount = 11;
+    const bountyAmount = 1;
 
     let err;
     try {
@@ -65,7 +69,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Non-default value for id required.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not create bounty on negative amount', async () => {
@@ -93,11 +97,11 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Contract circuit breaker is active.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not create bounty if same id exists', async () => {
-    const bountyAmount = 10;
+    const bountyAmount = 3;
     await bounty.createBounty(bountyId, bountyAmount, {from: alice});
     let err;
     try {
@@ -107,7 +111,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' A bounty with this id already exists');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not create bounty on insufficient balance', async () => {
@@ -133,7 +137,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Bounty does not exist.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not create submission if same id exists', async () => {
@@ -148,7 +152,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' A submission with this id already exists.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not create submission with default bounty id', async () => {
@@ -160,7 +164,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Non-default value for id required.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not create submission with default submission id', async () => {
@@ -174,7 +178,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Non-default value for id required.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not create submission if bounty has accepted submission', async () => {
@@ -190,7 +194,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' This bounty is closed.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not create submission on emergency stop', async () => {
@@ -205,7 +209,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Contract circuit breaker is active.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not accept submission when not bounty owner', async () => {
@@ -221,22 +225,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' This action can only be performed by the bounty owner.');
-  });
-
-  it('does not accept submission for default id', async () => {
-    const bountyAmount = 3;
-    await bounty.createBounty(bountyId, bountyAmount, {from: alice});
-
-    let err;
-    try {
-      await bounty.acceptSubmission('0x0', {from: alice});
-    } catch (error) {
-      err = error;
-    }
-
-    assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Non-default value for id required.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not accept submission when already accepted', async () => {
@@ -253,7 +242,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' This bounty is closed.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not accept submission when already rejected', async () => {
@@ -270,7 +259,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' This submission is already rejected.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not accept submission on emergency stop', async () => {
@@ -287,7 +276,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Contract circuit breaker is active.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not reject submission when already accepted', async () => {
@@ -304,22 +293,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' This bounty is closed.');
-  });
-
-  it('does not accept submission for default id', async () => {
-    const bountyAmount = 3;
-    await bounty.createBounty(bountyId, bountyAmount, {from: alice});
-
-    let err;
-    try {
-      await bounty.rejectSubmission('0x0', {from: alice});
-    } catch (error) {
-      err = error;
-    }
-
-    assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Non-default value for id required.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not reject submission on emergency stop', async () => {
@@ -336,7 +310,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' Contract circuit breaker is active.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not reject submission when already rejected', async () => {
@@ -344,7 +318,6 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     await bounty.createBounty(bountyId, bountyAmount, {from: alice});
     await bounty.createSubmission(bountyId, bobSubmissionId, {from: bob});
     await bounty.rejectSubmission(bobSubmissionId, {from: alice});
-
     let err;
     try {
       await bounty.rejectSubmission(bobSubmissionId, {from: alice});
@@ -353,7 +326,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' This submission is already rejected.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('does not accept submission when not bounty owner', async () => {
@@ -369,14 +342,14 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' This action can only be performed by the bounty owner.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('rejects submission when bounty owner', async () => {
     const bountyAmount = 3;
 
     await bounty.createBounty(bountyId, bountyAmount, {from: alice});
-    assert.equal(aliceBalance - bountyAmount, (await bounty.balanceOf(alice)).toNumber());
+    assert.equal(aliceBalance - bountyAmount, (await eip20.balanceOf(alice)).toNumber());
 
     await bounty.createSubmission(bountyId, bobSubmissionId, {from: bob});
     await bounty.rejectSubmission(bobSubmissionId, {from: alice});
@@ -386,7 +359,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     const bountyAmount = 3;
 
     await bounty.createBounty(bountyId, bountyAmount, {from: alice});
-    assert.equal(aliceBalance - bountyAmount, (await bounty.balanceOf(alice)).toNumber());
+    assert.equal(aliceBalance - bountyAmount, (await eip20.balanceOf(alice)).toNumber());
 
     await bounty.createSubmission(bountyId, bobSubmissionId, {from: bob});
     let err;
@@ -397,7 +370,7 @@ contract('Bounty', ([owner, alice, bob, charlie]) => {
     }
 
     assert.ok(err instanceof Error);
-    assert.equal(err.message, revertMessage + ' This action can only be performed by the bounty owner.');
+    assert.equal(err.message, revertMessage);
   });
 
   it('lists bounties when none', async () => {

@@ -6,6 +6,7 @@ library BountyLib {
     uint amount;
     bytes32[] submissionIds;
     bytes32 acceptedSubmissionId;
+    bytes32[] rejectedSubmissionIds;
   }
 
   struct BountyStorage {
@@ -36,12 +37,20 @@ library BountyLib {
     self.bounties[bountyId].submissionIds.push(submissionId);
   }
 
-  /** @dev Get accepted submission for a given bounty.
+  /** @dev Accepts submission for a given bounty.
   * @param self bounty storage.
   * @param bountyId id of bounty.
   */
   function acceptSubmission(BountyStorage storage self, bytes32 bountyId, bytes32 submissionId) internal {
     self.bounties[bountyId].acceptedSubmissionId = submissionId;
+  }
+
+  /** @dev Rejects submission for a given bounty.
+  * @param self bounty storage.
+  * @param bountyId id of bounty.
+  */
+  function rejectSubmission(BountyStorage storage self, bytes32 bountyId, bytes32 submissionId) internal {
+    self.bounties[bountyId].rejectedSubmissionIds.push(submissionId);
   }
 
   /** @dev Get a bounty by id

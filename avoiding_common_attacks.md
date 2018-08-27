@@ -27,3 +27,6 @@ The contract was specifically designed not to use tx.origin. Instead, it uses a 
 
 ### gas limits
 The contract does not contain any loops.
+
+### fallback function revert
+A fallback function has been added which prevents certain types of attacks.

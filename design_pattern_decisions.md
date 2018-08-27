@@ -1,5 +1,7 @@
 # Design Patterns Used
 
+## Composition: EIP20 Token Standard
+I am using an EIP20 token for value transfer between users. It is better to use a well-tested and widely adopted design instead of trying to reinvent the wheel.
 
 ## Emergency Stop
 The emergency stop pattern is used to enable the contract owner stop any state changes in case a

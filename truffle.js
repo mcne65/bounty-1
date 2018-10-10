@@ -7,9 +7,9 @@ module.exports = {
       port: 8545,
       network_id: '*' // Match any network id
     },
-    rinkeby: {
+    infura: {
       provider: new HDWalletProvider(process.env.MNEMONIC, process.env.INFURA_ENDPOINT),
-      network_id: 4
+      network_id: '*'
     }
   }
 };

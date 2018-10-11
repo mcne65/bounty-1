@@ -13,7 +13,7 @@ Any user can add submissions to bounties as long as they are not closed.
 
 # Set Up
 * We assume that you are runnign Ubuntu 16.04 and have git already installed.
-* This will not use Metamask for web3 if available, otherwise it will initialize its own for localhost:8485. See src/application.js
+* This will use Metamask for web3 if available, otherwise it will initialize its own for localhost:8485. See src/application.js
 
 ## IPFS
 Please refer to [these instructions](https://ipfs.io/docs/install) for installing ipfs.
